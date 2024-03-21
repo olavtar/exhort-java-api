@@ -50,7 +50,9 @@ public final class GradleProvider extends BaseJavaProvider {
     System.out.print(start);
     System.setProperty("EXHORT_GRADLE_PATH", "/opt/homebrew/bin/gradle");
 
-    Content content = gradleProvider.provideStack(Path.of("/Users/olgalavtar/repos/gradle-postgresql-vulnerability-example/build.gradle"));
+//    Content content = gradleProvider.provideStack(Path.of("/Users/olgalavtar/repos/gradle-postgresql-vulnerability-example/build.gradle"));
+    Content content = gradleProvider.provideStack(Path.of("/Users/olgalavtar/repos/exhort-java-api/src/test/resources/tst_manifests/gradle/deps_with_no_ignore_common_paths/build.gradle"));
+
     Path mvnPath = Path.of("/Users/olgalavtar/temp/gradleSbomStack.json");
     Files.writeString(mvnPath, new String(content.buffer));
     System.out.println(new String(content.buffer));

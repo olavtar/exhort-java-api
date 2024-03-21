@@ -71,7 +71,15 @@ class Gradle_Provider_Test extends ExhortTest {
     try (var is = getClass().getClassLoader().getResourceAsStream(String.join("/","tst_manifests", "gradle", testFolder, "build.gradle"))) {
       Files.write(tmpGradleFile, is.readAllBytes());
     }
-
+    var settingsFile = Files.createFile(tmpGradleDir.resolve("settings.gradle"));
+    try (var is = getClass().getClassLoader().getResourceAsStream(String.join("/","tst_manifests", "gradle", testFolder, "settings.gradle"))) {
+      Files.write(settingsFile, is.readAllBytes());
+    }
+    var subGradleDir = Files.createDirectories(tmpGradleDir.resolve("gradle"));
+    var libsVersionFile = Files.createFile(subGradleDir.resolve("libs.versions.toml"));
+    try (var is = getClass().getClassLoader().getResourceAsStream(String.join("/","tst_manifests", "gradle", testFolder, "gradle", "libs.versions.toml"))) {
+      Files.write(libsVersionFile, is.readAllBytes());
+    }
     // load expected SBOM
     String expectedSbom;
     try (var is = getClass().getClassLoader().getResourceAsStream(String.join("/","tst_manifests", "gradle", testFolder, "expected_stack_sbom.json"))) {
@@ -84,7 +92,7 @@ class Gradle_Provider_Test extends ExhortTest {
 
     MockedStatic<Operations> mockedOperations = mockStatic(Operations.class, Mockito.CALLS_REAL_METHODS);
     ArgumentMatcher<Path> matchPath = path -> path == null;
-    mockedOperations.when(() -> Operations.runProcessGetOutput(argThat(matchPath),any(String[].class))).thenReturn(expectedSbom);
+    mockedOperations.when(() -> Operations.runProcessGetOutput(argThat(matchPath),any(String[].class), any(String[].class))).thenReturn(depTree);
 
     // when providing stack content for our pom
     var content = new GradleProvider().provideStack(tmpGradleFile);
