@@ -21,7 +21,9 @@ import com.redhat.exhort.tools.Operations;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentMatcher;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -34,6 +36,7 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mockStatic;
 
 @ExtendWith(HelperExtension.class)
@@ -79,11 +82,9 @@ class Gradle_Provider_Test extends ExhortTest {
       depTree = new String(is.readAllBytes());
     }
 
-    MockedStatic<Operations> mockedOperations = mockStatic(Operations.class);
-    mockedOperations.when(() -> Operations.runProcess(any(),any())).thenAnswer(invocationOnMock -> {
-      return getOutputFileAndOverwriteItWithMock(depTree, invocationOnMock,"-DoutputFile");
-    });
-
+    MockedStatic<Operations> mockedOperations = mockStatic(Operations.class, Mockito.CALLS_REAL_METHODS);
+    ArgumentMatcher<Path> matchPath = path -> path == null;
+    mockedOperations.when(() -> Operations.runProcessGetOutput(argThat(matchPath),any(String[].class))).thenReturn(expectedSbom);
 
     // when providing stack content for our pom
     var content = new GradleProvider().provideStack(tmpGradleFile);

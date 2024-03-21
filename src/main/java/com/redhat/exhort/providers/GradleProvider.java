@@ -98,15 +98,16 @@ public final class GradleProvider extends BaseJavaProvider {
     String gradleOutput = Operations.runProcessGetOutput(Path.of(manifestPath.getParent().toString()), cmdList, null);
     // Write the output string to the temporary file
     Files.writeString(tempFile, gradleOutput);
-//    Path mvnTreePath = Path.of("/Users/olgalavtar/temp/gradleStackTree.txt");
-//    Files.writeString(mvnTreePath, Files.readString(tempFile));
+    Path mvnTreePath = Path.of("/Users/olgalavtar/temp/gradleStackTree.txt");
+    Files.writeString(mvnTreePath, Files.readString(tempFile));
 
     return tempFile;
   }
 
   private Path getProperties(Path manifestPath) throws IOException {
     Path propsTempFile = Files.createTempFile("propsfile", ".txt");
-    String propCmd = "./gradlew properties";
+    var gradle = Operations.getCustomPathOrElse("gradle");
+    String propCmd = gradle + " properties";
     String[] propCmdList = propCmd.split("\\s+");
     String properties = Operations.runProcessGetOutput(Path.of(manifestPath.getParent().toString()), propCmdList, null);
     // Create a temporary file
