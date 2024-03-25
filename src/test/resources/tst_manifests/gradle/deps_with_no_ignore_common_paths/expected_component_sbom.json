@@ -3,7 +3,7 @@
   "specVersion" : "1.4",
   "version" : 1,
   "metadata" : {
-    "timestamp" : "2024-02-28T19:37:23Z",
+    "timestamp" : "2024-03-25T17:41:54Z",
     "component" : {
       "group" : "org.acme.dbaas",
       "name" : "postgresql-orm-quarkus",

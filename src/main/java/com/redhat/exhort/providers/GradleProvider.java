@@ -51,16 +51,16 @@ public final class GradleProvider extends BaseJavaProvider {
     System.setProperty("EXHORT_GRADLE_PATH", "/opt/homebrew/bin/gradle");
 
 //    Content content = gradleProvider.provideStack(Path.of("/Users/olgalavtar/repos/gradle-postgresql-vulnerability-example/build.gradle"));
-    Content content = gradleProvider.provideStack(Path.of("/Users/olgalavtar/repos/exhort-java-api/src/test/resources/tst_manifests/gradle/deps_with_no_ignore_common_paths/build.gradle"));
+//    Content content = gradleProvider.provideStack(Path.of("/Users/olgalavtar/repos/exhort-java-api/src/test/resources/tst_manifests/gradle/deps_with_no_ignore_common_paths/build.gradle"));
 
-    Path mvnPath = Path.of("/Users/olgalavtar/temp/gradleSbomStack.json");
-    Files.writeString(mvnPath, new String(content.buffer));
-    System.out.println(new String(content.buffer));
-//
-//    Content componentContent = gradleProvider.provideComponent(Path.of("/Users/olgalavtar/repos/gradle-postgresql-vulnerability-example/"));
-//    Path gradlePath = Path.of("/Users/olgalavtar/temp/gradleSbomComponent.json");
-//    Files.writeString(gradlePath, new String(componentContent.buffer));
-//    System.out.println(new String(componentContent.buffer));
+//    Path mvnPath = Path.of("/Users/olgalavtar/temp/gradleSbomStack.json");
+//    Files.writeString(mvnPath, new String(content.buffer));
+//    System.out.println(new String(content.buffer));
+
+    Content componentContent = gradleProvider.provideComponent(Path.of("/Users/olgalavtar/repos/gradle-postgresql-vulnerability-example/build.gradle"));
+    Path gradlePath = Path.of("/Users/olgalavtar/temp/gradleSbomComponent.json");
+    Files.writeString(gradlePath, new String(componentContent.buffer));
+    System.out.println(new String(componentContent.buffer));
 
     LocalDateTime end = LocalDateTime.now();
     System.out.print(end);
@@ -87,21 +87,15 @@ public final class GradleProvider extends BaseJavaProvider {
 
   private static Path getDependencies(Path manifestPath) throws IOException {
     // check for custom gradle executable
-    System.setProperty("EXHORT_GRADLE_PATH", "/opt/homebrew/bin/gradle");
     var gradle = Operations.getCustomPathOrElse("gradle");
     // create a temp file for storing the dependency tree in
     var tempFile = Files.createTempFile("exhort_graph_", null);
     // the command will create the dependency tree in the temp file
-//    String gradleCommand = "./gradlew dependencies";
     String gradleCommand = gradle + " dependencies";
-
 
     String[] cmdList = gradleCommand.split("\\s+");
     String gradleOutput = Operations.runProcessGetOutput(Path.of(manifestPath.getParent().toString()), cmdList, null);
-    // Write the output string to the temporary file
     Files.writeString(tempFile, gradleOutput);
-    Path mvnTreePath = Path.of("/Users/olgalavtar/temp/gradleStackTree.txt");
-    Files.writeString(mvnTreePath, Files.readString(tempFile));
 
     return tempFile;
   }
@@ -114,9 +108,7 @@ public final class GradleProvider extends BaseJavaProvider {
     String properties = Operations.runProcessGetOutput(Path.of(manifestPath.getParent().toString()), propCmdList, null);
     // Create a temporary file
     Files.writeString(propsTempFile, properties);
-    // TODO: remove
-    Path propsPath = Path.of("/Users/olgalavtar/temp/gradleProps.txt");
-    Files.writeString(propsPath, properties);
+
     return propsTempFile;
   }
 
@@ -167,18 +159,14 @@ public final class GradleProvider extends BaseJavaProvider {
     String content = Files.readString(propsTempFile);
     // Define the regular expression pattern for key-value pairs
     Pattern pattern = Pattern.compile("([^:]+):\\s+(.+)");
-    // Match the content with the pattern
     Matcher matcher = pattern.matcher(content);
     // Create a Map to store key-value pairs
     Map<String, String> keyValueMap = new HashMap<>();
 
     // Iterate through matches and add them to the map
     while (matcher.find()) {
-      // Extract key and value
       String key = matcher.group(1).trim();
       String value = matcher.group(2).trim();
-
-      // Put key and value in the map
       keyValueMap.put(key, value);
     }
     // Check if any key-value pairs were found
@@ -226,40 +214,16 @@ public final class GradleProvider extends BaseJavaProvider {
 
     String[] configurationNames = {"api", "implementation", "compile"};
 
-    // Set to store all direct dependencies
-//    Set<String> allDirectDependencies = new HashSet<>();
-//    for (String configurationName : configurationNames) {
-//      List<String> directDependencies = extractLines(tempFile, configurationName);
-//
-//      System.out.println("Direct Dependencies for '" + configurationName + "' configuration:");
-//      for (String dependency : directDependencies) {
-//        System.out.println(dependency);
-//      }
-//      // Add the dependencies to the set of all dependencies
-//      allDirectDependencies.addAll(directDependencies);
-//      // Check if dependencies are found for the current configuration
-//      if (!directDependencies.isEmpty()) {
-//        break;  // If found, stop processing other configurations
-//      }
-//    }
-
     String configName = null;
     for (String configurationName : configurationNames) {
       List<String> directDependencies = extractLines(tempFile, configurationName);
 
       // Check if dependencies are found for the current configuration
       if (!directDependencies.isEmpty()) {
-        System.out.println("Direct Dependencies found for '" + configurationName + "' configuration:");
         configName = configurationName;
-//        allDirectDependencies.add(configurationName);
         break;
       }
     }
-
-//    System.out.println("All Direct Dependencies:");
-//    for (String dependency : allDirectDependencies) {
-//      System.out.println(dependency);
-//    }
 
     var sbom = buildSbomFromTextFormat(tempFile, propertiesMap, configName);
     return new Content(sbom.getAsJsonString().getBytes(), Api.CYCLONEDX_MEDIA_TYPE);

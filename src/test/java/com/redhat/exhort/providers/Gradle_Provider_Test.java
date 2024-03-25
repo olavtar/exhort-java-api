@@ -35,6 +35,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mockStatic;
@@ -49,14 +50,6 @@ class Gradle_Provider_Test extends ExhortTest {
   // - expected_sbom.json: the SBOM expected to be provided
   static Stream<String> testFolders() {
     return Stream.of(
-//      "deps_with_no_ignore_provided_scope",
-//      "deps_no_trivial_with_ignore",
-//      "deps_with_ignore_on_artifact",
-//      "deps_with_ignore_on_dependency",
-//      "deps_with_ignore_on_group",
-//      "deps_with_ignore_on_version",
-//      "deps_with_ignore_on_wrong",
-//      "deps_with_no_ignore",
       "deps_with_no_ignore_common_paths"
     );
   }
@@ -106,19 +99,6 @@ class Gradle_Provider_Test extends ExhortTest {
 
   }
 
-  private static String getOutputFileAndOverwriteItWithMock(String outputFileContent, InvocationOnMock invocationOnMock,String parameterPrefix) throws IOException {
-    String[] rawArguments = (String[]) invocationOnMock.getRawArguments()[0];
-    Optional<String> outputFileArg = Arrays.stream(rawArguments).filter(arg -> arg!= null && arg.startsWith(parameterPrefix)).findFirst();
-    String outputFilePath=null;
-    if(outputFileArg.isPresent())
-    {
-      String outputFile = outputFileArg.get();
-      outputFilePath = outputFile.substring(outputFile.indexOf("=") + 1);
-      Files.writeString(Path.of(outputFilePath), outputFileContent);
-    }
-    return outputFilePath;
-  }
-
   @ParameterizedTest
   @MethodSource("testFolders")
   void test_the_provideComponent(String testFolder) throws IOException, InterruptedException {
@@ -127,58 +107,53 @@ class Gradle_Provider_Test extends ExhortTest {
     try (var is = getClass().getClassLoader().getResourceAsStream(String.join("/","tst_manifests", "gradle", testFolder, "build.gradle"))) {
       targetGradleBuild = is.readAllBytes();
     }
-    // load expected SBOM
-    String expectedSbom = "";
-    try (var is = getClass().getClassLoader().getResourceAsStream(String.join("/","tst_manifests", "gradle", testFolder, "expected_component_sbom.json"))) {
-      expectedSbom = new String(is.readAllBytes());
-    }
 
-    String effectivePom;
-    try (var is = getClass().getClassLoader().getResourceAsStream(String.join("/","tst_manifests", "gradle", testFolder, "effectivePom.xml"))) {
-      effectivePom = new String(is.readAllBytes());
-    }
-
-    MockedStatic<Operations> mockedOperations = mockStatic(Operations.class);
-    mockedOperations.when(() -> Operations.runProcess(any(),any())).thenAnswer(invocationOnMock -> {
-      return getOutputFileAndOverwriteItWithMock(effectivePom, invocationOnMock,"-Doutput");
-    });
-
-    // when providing component content for our pom
-    var content = new GradleProvider().provideComponent(targetGradleBuild);
-    mockedOperations.close();
-    // verify expected SBOM is returned
-    assertThat(content.type).isEqualTo(Api.CYCLONEDX_MEDIA_TYPE);
-    assertThat(dropIgnored(new String(content.buffer)))
-      .isEqualTo(dropIgnored(expectedSbom));
+    GradleProvider gradleProvider = new GradleProvider();
+    assertThatIllegalArgumentException().isThrownBy(() -> {
+      gradleProvider.provideComponent(targetGradleBuild);
+    }).withMessage("Gradle Package Manager requires the full package directory, not just the manifest content, to generate the dependency tree. Please provide the complete package directory path.");
 
   }
   @ParameterizedTest
   @MethodSource("testFolders")
   void test_the_provideComponent_With_Path(String testFolder) throws IOException, InterruptedException {
-    // load the pom target pom file
+    System.setProperty("EXHORT_GRADLE_PATH", "/opt/homebrew/bin/gradle");
+
     // create temp file hosting our sut build.gradle
-    var tmpPomFile = Files.createTempFile("exhort_test_", ".xml");
+    var tmpGradleDir = Files.createTempDirectory("exhort_test_");
+    var tmpGradleFile = Files.createFile(tmpGradleDir.resolve("build.gradle"));
+//    log.log(System.Logger.Level.INFO,"the test folder is : " + testFolder);
     try (var is = getClass().getClassLoader().getResourceAsStream(String.join("/","tst_manifests", "gradle", testFolder, "build.gradle"))) {
-      Files.write(tmpPomFile, is.readAllBytes());
+      Files.write(tmpGradleFile, is.readAllBytes());
+    }
+    var settingsFile = Files.createFile(tmpGradleDir.resolve("settings.gradle"));
+    try (var is = getClass().getClassLoader().getResourceAsStream(String.join("/","tst_manifests", "gradle", testFolder, "settings.gradle"))) {
+      Files.write(settingsFile, is.readAllBytes());
+    }
+    var subGradleDir = Files.createDirectories(tmpGradleDir.resolve("gradle"));
+    var libsVersionFile = Files.createFile(subGradleDir.resolve("libs.versions.toml"));
+    try (var is = getClass().getClassLoader().getResourceAsStream(String.join("/","tst_manifests", "gradle", testFolder, "gradle", "libs.versions.toml"))) {
+      Files.write(libsVersionFile, is.readAllBytes());
     }
     // load expected SBOM
-    String expectedSbom = "";
+    String expectedSbom;
     try (var is = getClass().getClassLoader().getResourceAsStream(String.join("/","tst_manifests", "gradle", testFolder, "expected_component_sbom.json"))) {
       expectedSbom = new String(is.readAllBytes());
     }
-
-    String effectivePom;
-    try (var is = getClass().getClassLoader().getResourceAsStream(String.join("/","tst_manifests", "gradle", testFolder, "effectivePom.xml"))) {
-      effectivePom = new String(is.readAllBytes());
+    String depTree;
+    try (var is = getClass().getClassLoader().getResourceAsStream(String.join("/","tst_manifests", "gradle", testFolder, "depTree.txt"))) {
+      depTree = new String(is.readAllBytes());
     }
 
-    MockedStatic<Operations> mockedOperations = mockStatic(Operations.class);
-    mockedOperations.when(() -> Operations.runProcess(any(),any())).thenAnswer(invocationOnMock -> {
-      return getOutputFileAndOverwriteItWithMock(effectivePom, invocationOnMock,"-Doutput");
-    });
+    MockedStatic<Operations> mockedOperations = mockStatic(Operations.class, Mockito.CALLS_REAL_METHODS);
+    ArgumentMatcher<Path> matchPath = path -> path == null;
+    mockedOperations.when(() -> Operations.runProcessGetOutput(argThat(matchPath),any(String[].class), any(String[].class))).thenReturn(depTree);
+
 
     // when providing component content for our pom
-    var content = new GradleProvider().provideComponent(tmpPomFile);
+    var content = new GradleProvider().provideComponent(tmpGradleFile);
+    // cleanup
+    Files.deleteIfExists(tmpGradleFile);
     // verify expected SBOM is returned
     mockedOperations.close();
     assertThat(content.type).isEqualTo(Api.CYCLONEDX_MEDIA_TYPE);
