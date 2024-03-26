@@ -297,6 +297,7 @@ System.setProperty("EXHORT_SNYK_TOKEN", "my-private-snyk-token");
 System.setProperty("EXHORT_MVN_PATH", "/path/to/custom/mvn");
 System.setProperty("EXHORT_NPM_PATH", "/path/to/custom/npm");
 System.setProperty("EXHORT_GO_PATH", "/path/to/custom/go");
+System.setProperty("EXHORT_GRADLE_PATH", "/path/to/custom/gradle");
 //python - python3, pip3 take precedence if python version > 3 installed
 System.setProperty("EXHORT_PYTHON3_PATH", "/path/to/python3");
 System.setProperty("EXHORT_PIP3_PATH", "/path/to/pip3");
@@ -371,6 +372,11 @@ following keys for setting custom paths for the said executables.
 <td><a href="https://go.dev/blog/using-go-modules/">Go Modules</a></td>
 <td><em>go</em></td>
 <td>EXHORT_GO_PATH</td>
+</tr>
+<tr>
+<td><a href="https://gradle.org/">Gradle Modules</a></td>
+<td><em>gradle</em></td>
+<td>EXHORT_GRADLE_PATH</td>
 </tr>
 <tr>
 <td><a href="https://www.python.org/">Python programming language</a></td>
