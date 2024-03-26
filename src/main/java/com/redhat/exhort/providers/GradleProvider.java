@@ -50,17 +50,17 @@ public final class GradleProvider extends BaseJavaProvider {
     System.out.print(start);
     System.setProperty("EXHORT_GRADLE_PATH", "/opt/homebrew/bin/gradle");
 
-    Content content = gradleProvider.provideStack(Path.of("/Users/olgalavtar/repos/gradle-postgresql-vulnerability-example/build.gradle"));
+//    Content content = gradleProvider.provideStack(Path.of("/Users/olgalavtar/repos/gradle-postgresql-vulnerability-example/build.gradle"));
 //    Content content = gradleProvider.provideStack(Path.of("/Users/olgalavtar/repos/exhort-java-api/src/test/resources/tst_manifests/gradle/deps_with_no_ignore_common_paths/build.gradle"));
 
-    Path mvnPath = Path.of("/Users/olgalavtar/temp/gradleSbomStack.json");
-    Files.writeString(mvnPath, new String(content.buffer));
-    System.out.println(new String(content.buffer));
+//    Path mvnPath = Path.of("/Users/olgalavtar/temp/gradleSbomStack.json");
+//    Files.writeString(mvnPath, new String(content.buffer));
+//    System.out.println(new String(content.buffer));
 
-//    Content componentContent = gradleProvider.provideComponent(Path.of("/Users/olgalavtar/repos/gradle-postgresql-vulnerability-example/build.gradle"));
-//    Path gradlePath = Path.of("/Users/olgalavtar/temp/gradleSbomComponent.json");
-//    Files.writeString(gradlePath, new String(componentContent.buffer));
-//    System.out.println(new String(componentContent.buffer));
+    Content componentContent = gradleProvider.provideComponent(Path.of("/Users/olgalavtar/repos/gradle-postgresql-vulnerability-example/build.gradle"));
+    Path gradlePath = Path.of("/Users/olgalavtar/temp/gradleSbomComponent.json");
+    Files.writeString(gradlePath, new String(componentContent.buffer));
+    System.out.println(new String(componentContent.buffer));
 
     LocalDateTime end = LocalDateTime.now();
     System.out.print(end);
@@ -96,8 +96,6 @@ public final class GradleProvider extends BaseJavaProvider {
     String[] cmdList = gradleCommand.split("\\s+");
     String gradleOutput = Operations.runProcessGetOutput(Path.of(manifestPath.getParent().toString()), cmdList, null);
     Files.writeString(tempFile, gradleOutput);
-    Path mvnTreePath = Path.of("/Users/olgalavtar/temp/gradleStackTree.txt");
-    Files.writeString(mvnTreePath, Files.readString(tempFile));
 
     return tempFile;
   }
